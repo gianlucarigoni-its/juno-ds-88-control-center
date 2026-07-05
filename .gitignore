@@ -1,0 +1,22 @@
+# Personal notes
+juno-ds-control-center-progetto.md
+
+# Build folders
+build/
+cmake-build-*/
+
+# VS Code
+.vscode/
+
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
