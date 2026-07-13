@@ -1,6 +1,5 @@
-# Personal notes
-juno-ds-control-center-progetto.md
-progress.md
+# Personal 
+assets/
 
 # Build folders
 build/
@@ -21,3 +20,5 @@ cmake-build-*/
 
 # Logs
 *.log
+
+vc140.pdb
