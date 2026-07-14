@@ -15,7 +15,8 @@ juce_add_gui_app(juno-ds-control-center
 )
 
 target_sources(juno-ds-control-center PRIVATE
-    main.cpp
+    Main.cpp
+    MidiService.cpp
 )
 
 target_link_libraries(juno-ds-control-center PRIVATE

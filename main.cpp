@@ -1,13 +1,15 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
+#include "MidiService.h" 
 
 // 1. IL COMPONENTE GRAFICO (Il contenuto)
-class MainComponent  :  public juce::Component,
-                        public juce::MidiInputCallback
+class MainComponent  :  public juce::Component
 {
 public:
     MainComponent()
     {
+        midiService.setLogCallback([this](const juce::String& s){ appendLog(s); });
+
         // TITLE
         addAndMakeVisible(titleLabel);
         titleLabel.setText("juno-ds Control Center v0.1.0", juce::dontSendNotification);
@@ -17,10 +19,7 @@ public:
         addAndMakeVisible(connectionButton);
         connectionButton.onClick = [this]
         {
-            //RESETTO LE CONESSIONI SE ESISTONO
-            if (midiInputConnection) { midiInputConnection->stop(); }
-            midiInputConnection.reset();
-            midiOutputConnection.reset();
+            midiService.resetConnection();
 
             juce::int32 midiInputID;
             juce::int32 midiOutputID;
@@ -28,7 +27,16 @@ public:
             midiOutputID = midiOutputCombo.getSelectedId();
             if(midiInputID != 0 && midiOutputID != 0) 
             { 
-                connectSelectedDevices(midiInputID-1, midiOutputID-1); 
+                if(midiService.connectSelectedDevices(midiInputID-1, midiOutputID-1))   
+                { 
+                    connectionStatusValue.setText("Connected", juce::dontSendNotification); 
+                    appendLog("Midi input and output devices are connected"); 
+                }
+                else                                                                    
+                { 
+                    connectionStatusValue.setText("Connection failed", juce::dontSendNotification);
+                    appendLog("Midi input/output device failed to connect"); 
+                }
             }
             else 
             {
@@ -56,7 +64,7 @@ public:
             auto selectedText = midiInputCombo.getText();
             appendLog("input selected: " + selectedText);
             juce::int32 id = midiInputCombo.getSelectedId()-1;
-            appendLog("Identifier " +  juce::String(midiInputDevices[id].identifier));
+            appendLog("Identifier " +  juce::String(midiService.getMidiInputDevices()[id].identifier));
         };
 
         // MIDI OUTPUT
@@ -69,8 +77,8 @@ public:
         {
             auto selectedText = midiOutputCombo.getText();
             appendLog("output selected: " + selectedText);
-            juce::int32 id = midiInputCombo.getSelectedId()-1;
-            appendLog("Identifier " +  juce::String(midiInputDevices[id].identifier));
+            juce::int32 id = midiOutputCombo.getSelectedId()-1;
+            appendLog("Identifier " +  juce::String(midiService.getMidiOutputDevices()[id].identifier));
         };
 
         // REFRESH DEVICES BUTTON
@@ -78,33 +86,23 @@ public:
         refreshDevicesButton.onClick = [this]
         {
             appendLog("Button pressed: Refresh devices");
-            detectMidiDevices();
+            clearCombo();
+            
+            juce::Array<juce::MidiDeviceInfo> midiInputAvailable = midiService.detectMidiInputDevices();
+            appendMidiDevices(midiInputAvailable, midiInputCombo);
+            appendLog("Found " +  juce::String(midiInputAvailable.size()) + " MIDI input devices");
+
+            juce::Array<juce::MidiDeviceInfo> midiOutputAvailable = midiService.detectMidiOutputDevices();
+            appendMidiDevices(midiOutputAvailable, midiOutputCombo);
+            appendLog("Found " +  juce::String(midiOutputAvailable.size()) + " MIDI output devices");
         };
 
         
-        addAndMakeVisible(sendNote);
-        sendNote.onClick = [this]
+        addAndMakeVisible(sendNoteButton);
+        sendNoteButton.onClick = [this]
         {
-            if(midiOutputConnection != nullptr)
-            {
-                // juce::MidiMessage msb = juce::MidiMessage::controllerEvent(1, 0, 87); // 0 per msb
-                // midiOutputConnection->sendMessageNow(msb);
-                // juce::MidiMessage lsb = juce::MidiMessage::controllerEvent(1, 32, 64); // 32 per lsb
-                // midiOutputConnection->sendMessageNow(lsb);
-                // juce::MidiMessage pc = juce::MidiMessage::programChange(1, 119);
-                // midiOutputConnection->sendMessageNow(pc);
-
-                midiOutputConnection->sendMessageNow(juce::MidiMessage::noteOn(1, 60, (juce::uint8)100));
-                juce::Timer::callAfterDelay(500, [this] {
-                    midiOutputConnection->sendMessageNow(juce::MidiMessage::noteOff(1, 60));
-                });
-                appendLog("Note send");
-
-            }
-            else
-            {
-                appendLog("Impossible to send the note. \n\tERRORE: device is not connected");
-            }
+            if(midiService.sendNote())  { appendLog("Note send"); }
+            else                        { appendLog("Impossible to send the note. \n\tERRORE: device is not connected"); }
         };
 
         // LOG
@@ -115,38 +113,18 @@ public:
         logEditor.setReturnKeyStartsNewLine(true);
         
 
-        detectMidiDevices();
+        juce::Array<juce::MidiDeviceInfo> midiInputAvailable = midiService.detectMidiInputDevices();
+        appendMidiDevices(midiInputAvailable, midiInputCombo);
+        appendLog("Found " +  juce::String(midiInputAvailable.size()) + " MIDI input devices");
+
+        juce::Array<juce::MidiDeviceInfo> midiOutputAvailable = midiService.detectMidiOutputDevices();
+        appendMidiDevices(midiOutputAvailable, midiOutputCombo);
+        appendLog("Found " +  juce::String(midiOutputAvailable.size()) + " MIDI output devices");
         
         setSize(600, 400);
     }
 
     ~MainComponent() override = default;
-
-    void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override
-    {
-        juce::String description;
-
-        if (message.isNoteOn())
-            description = "NOTE ON  ch=" + juce::String(message.getChannel())
-                        + " note=" + juce::String(message.getNoteNumber())
-                        + " vel=" + juce::String(message.getVelocity());
-        else if (message.isNoteOff())
-            description = "NOTE OFF ch=" + juce::String(message.getChannel())
-                        + " note=" + juce::String(message.getNoteNumber());
-        else if (message.isController())
-            description = "CC  ch=" + juce::String(message.getChannel())
-                        + " cc=" + juce::String(message.getControllerNumber())
-                        + " val=" + juce::String(message.getControllerValue());
-        else
-            description = "MIDI msg (raw, size=" + juce::String(message.getRawDataSize()) + ")";
-
-        // Thread-safe: passiamo al thread UI
-        juce::MessageManager::callAsync([this, description]()
-        {
-            appendLog("[IN] " + description);
-        });
-        
-    }
 
     void resized() override 
     {
@@ -183,7 +161,7 @@ public:
         
         area.removeFromTop(10);
 
-        sendNote.setBounds(area.removeFromTop(20));
+        sendNoteButton.setBounds(area.removeFromTop(20));
 
         logEditor.setBounds(area.removeFromBottom(120));
     }
@@ -202,62 +180,24 @@ public:
         logEditor.insertTextAtCaret(s + "\n");
     }
 
-    void detectMidiDevices()
+    void clearCombo()
     {
-        
         midiInputCombo.clear();
         midiOutputCombo.clear();
-
-        auto midiInputs = juce::MidiInput::getAvailableDevices();
-        for(int i=0; i<midiInputs.size(); i++)
-        {
-            auto midiInfo = midiInputs[i];
-            midiInputCombo.addItem(midiInfo.name, i+1);
-        }
-        midiInputDevices = midiInputs;
-        appendLog("Found " +  juce::String(midiInputs.size()) + " MIDI input devices");
-
-
-        auto midiOutputs = juce::MidiOutput::getAvailableDevices();
-        for(int i=0; i<midiOutputs.size(); i++)
-        {
-            auto midiInfo = midiOutputs[i];
-            midiOutputCombo.addItem(midiInfo.name, i+1);
-        }
-        midiOutputDevices = midiOutputs;
-        appendLog("Found " +  juce::String(midiOutputs.size()) + " MIDI output devices");
     }
 
-    void connectSelectedDevices(juce::int32 midiInputID, juce::int32 midiOutputID){
-        juce::MidiDeviceInfo midiInputDeviceInfo = midiInputDevices[midiInputID];
-        juce::MidiDeviceInfo midiOutputDeviceInfo = midiOutputDevices[midiOutputID];
-
-        midiInputConnection = juce::MidiInput::openDevice(midiInputDeviceInfo.identifier, this);
-        midiOutputConnection = juce::MidiOutput::openDevice(midiOutputDeviceInfo.identifier);
-
-        if (midiInputConnection == nullptr || midiOutputConnection == nullptr)
+    void appendMidiDevices(juce::Array<juce::MidiDeviceInfo> devicesList, juce::ComboBox& combo){
+        for(int i=0; i<devicesList.size(); i++)
         {
-            connectionStatusValue.setText("Connection failed", juce::dontSendNotification);
-            appendLog("Midi input/output device failed to connect");
+            auto midiInfo = devicesList[i];
+            combo.addItem(midiInfo.name, i+1);
         }
-        else
-        {
-            midiInputConnection->start();
-            connectionStatusValue.setText("Connected", juce::dontSendNotification);
-            appendLog("Midi input and output devices are connected");
-        }
-
     }
+
+    
 
 private:
-    // ARRAY DI DEVICES RILEVATI
-    juce::Array<juce::MidiDeviceInfo> midiInputDevices;
-    juce::Array<juce::MidiDeviceInfo> midiOutputDevices;
-    
-    // CONNESSIONI
-    std::unique_ptr<juce::MidiInput> midiInputConnection;
-    std::unique_ptr<juce::MidiOutput> midiOutputConnection;
-
+    MidiService midiService;
 
     juce::Label titleLabel;
     
@@ -274,7 +214,7 @@ private:
 
     juce::TextEditor logEditor; 
 
-    juce::TextButton sendNote { "Send note"};
+    juce::TextButton sendNoteButton { "Send note"};
 };
 
 // 2. LA FINESTRA PRINCIPALE (Il contenitore del sistema operativo)

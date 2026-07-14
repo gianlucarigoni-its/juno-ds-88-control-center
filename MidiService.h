@@ -1,0 +1,33 @@
+
+#pragma once
+
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <functional>
+
+class MidiService : public juce::MidiInputCallback
+{
+public:
+    MidiService();
+    ~MidiService() override = default;
+
+    void setLogCallback(std::function<void(const juce::String&)> callback);
+
+    juce::Array<juce::MidiDeviceInfo> detectMidiInputDevices();
+    juce::Array<juce::MidiDeviceInfo> detectMidiOutputDevices();
+
+    juce::Array<juce::MidiDeviceInfo> getMidiInputDevices();
+    juce::Array<juce::MidiDeviceInfo> getMidiOutputDevices();
+
+    void resetConnection();
+    bool connectSelectedDevices(int inputIndex, int outputIndex);
+    bool sendNote();
+
+    void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override;
+
+private:
+    std::function<void(const juce::String&)> onLog;
+    juce::Array<juce::MidiDeviceInfo> midiInputDevices;
+    juce::Array<juce::MidiDeviceInfo> midiOutputDevices;
+    std::unique_ptr<juce::MidiInput> midiInputConnection;
+    std::unique_ptr<juce::MidiOutput> midiOutputConnection;
+};
