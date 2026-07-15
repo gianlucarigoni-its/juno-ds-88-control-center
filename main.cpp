@@ -1,6 +1,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "MidiService.h" 
+#include "MidiParameter.h"
 
 // 1. IL COMPONENTE GRAFICO (Il contenuto)
 class MainComponent  :  public juce::Component
@@ -97,13 +98,81 @@ public:
             appendLog("Found " +  juce::String(midiOutputAvailable.size()) + " MIDI output devices");
         };
 
-        
+        // SEND NOTE BUTTON
         addAndMakeVisible(sendNoteButton);
         sendNoteButton.onClick = [this]
         {
             if(midiService.sendNote())  { appendLog("Note send"); }
             else                        { appendLog("Impossible to send the note. \n\tERRORE: device is not connected"); }
         };
+
+        // VOLUME SLIDER + MIDI PARAMETER
+        addAndMakeVisible(volumeSlider);
+        volumeMidiParameter.name = juce::String("Volume");
+        volumeMidiParameter.ccNumber = 11;
+        volumeSlider.setRange(0, 127, 1); 
+        volumeSlider.setTitle(volumeMidiParameter.name);
+        volumeSlider.onValueChange = [this]
+        {
+            volumeMidiParameter.setValue(int(volumeSlider.getValue()));
+            if(midiService.setParameterValue(volumeMidiParameter))
+                appendLog("Volume midi inpostato a " + juce::String(volumeMidiParameter.getValue()));
+            else
+                appendLog("Set volume failed");
+        };
+        addAndMakeVisible(volumeLabel);
+        volumeLabel.setText("Volume", juce::dontSendNotification);
+
+        // REVERB SLIDER + MIDI PARAMETER
+        addAndMakeVisible(reverbSlider);
+        reverbMidiParameter.name = juce::String("Reverb");
+        reverbMidiParameter.ccNumber = 91;
+        reverbSlider.setRange(0, 127, 1); 
+        reverbSlider.setTitle(reverbMidiParameter.name);
+        reverbSlider.onValueChange = [this]
+        {
+            reverbMidiParameter.setValue(int(reverbSlider.getValue()));
+            if(midiService.setParameterValue(reverbMidiParameter))
+                appendLog("Reverb midi inpostato a " + juce::String(reverbMidiParameter.getValue()));
+            else
+                appendLog("Set reverb failed");
+        };
+        addAndMakeVisible(reverbLabel);
+        reverbLabel.setText("Reverb", juce::dontSendNotification);
+
+        // CUTOFF SLIDER + MIDI PARAMETER
+        addAndMakeVisible(cutoffSlider);
+        cutoffMidiParameter.name = juce::String("Cutoff");
+        cutoffMidiParameter.ccNumber = 74;
+        cutoffSlider.setRange(0, 127, 1); 
+        cutoffSlider.setTitle(cutoffMidiParameter.name);
+        cutoffSlider.onValueChange = [this]
+        {
+            cutoffMidiParameter.setValue(int(cutoffSlider.getValue()));
+            if(midiService.setParameterValue(cutoffMidiParameter))
+                appendLog("Cutoff midi inpostato a " + juce::String(cutoffMidiParameter.getValue()));
+            else
+                appendLog("Set cutoff failed");
+        };
+        addAndMakeVisible(cutoffLabel);
+        cutoffLabel.setText("Cutoff", juce::dontSendNotification);
+
+        // CHORUS SLIDER + MIDI PARAMETER
+        addAndMakeVisible(chorusSlider);
+        chorusMidiParameter.name = juce::String("Volume");
+        chorusMidiParameter.ccNumber = 93;
+        chorusSlider.setRange(0, 127, 1); 
+        chorusSlider.setTitle(chorusMidiParameter.name);
+        chorusSlider.onValueChange = [this]
+        {
+            chorusMidiParameter.setValue(int(chorusSlider.getValue()));
+            if(midiService.setParameterValue(chorusMidiParameter))
+                appendLog("Chorus midi inpostato a " + juce::String(chorusMidiParameter.getValue()));
+            else
+                appendLog("Set chorus failed");
+        };
+        addAndMakeVisible(chorusLabel);
+        chorusLabel.setText("Chorus", juce::dontSendNotification);
 
         // LOG
         addAndMakeVisible(logEditor);
@@ -161,7 +230,19 @@ public:
         
         area.removeFromTop(10);
 
-        sendNoteButton.setBounds(area.removeFromTop(20));
+        // sendNoteButton.setBounds(area.removeFromTop(20));
+        auto midiParameterLabelRow1 = area.removeFromTop(15);
+        volumeLabel.setBounds(midiParameterLabelRow1.removeFromLeft(250));
+        reverbLabel.setBounds(midiParameterLabelRow1.removeFromRight(250));
+        auto midiParameterRow1 = area.removeFromTop(25);
+        volumeSlider.setBounds(midiParameterRow1.removeFromLeft(250));
+        reverbSlider.setBounds(midiParameterRow1.removeFromRight(250));
+        auto midiParameterLabelRow2 = area.removeFromTop(15);
+        cutoffLabel.setBounds(midiParameterLabelRow2.removeFromLeft(250));
+        chorusLabel.setBounds(midiParameterLabelRow2.removeFromRight(250));
+        auto midiParameterRow2 = area.removeFromTop(25);
+        cutoffSlider.setBounds(midiParameterRow2.removeFromLeft(250));
+        chorusSlider.setBounds(midiParameterRow2.removeFromRight(250));
 
         logEditor.setBounds(area.removeFromBottom(120));
     }
@@ -211,10 +292,24 @@ private:
     juce::Label midiOutputLabel;
     juce::ComboBox midiInputCombo;
     juce::ComboBox midiOutputCombo;
+    
+    juce::TextButton sendNoteButton { "Send note"};
+    
+    juce::Slider volumeSlider;
+    MidiParameter volumeMidiParameter;
+    juce::Label volumeLabel;
+    juce::Slider reverbSlider;
+    MidiParameter reverbMidiParameter;
+    juce::Label reverbLabel;
+    juce::Slider cutoffSlider;
+    MidiParameter cutoffMidiParameter;
+    juce::Label cutoffLabel;
+    juce::Slider chorusSlider;
+    MidiParameter chorusMidiParameter;
+    juce::Label chorusLabel;
 
     juce::TextEditor logEditor; 
 
-    juce::TextButton sendNoteButton { "Send note"};
 };
 
 // 2. LA FINESTRA PRINCIPALE (Il contenitore del sistema operativo)
@@ -249,6 +344,7 @@ public:
 
     void initialise(const juce::String& commandLine) override
     {
+        (void)commandLine; // currently unused
         mainWindow = std::make_unique<MainWindow>(getApplicationName());
     }
 

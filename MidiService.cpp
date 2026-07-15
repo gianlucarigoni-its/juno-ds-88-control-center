@@ -1,5 +1,6 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "MidiService.h"
+#include "MidiParameter.h"
 
 MidiService::MidiService() {}
 
@@ -102,4 +103,14 @@ bool MidiService::sendNote(){
     {
         return false;
     }
+}
+
+bool MidiService::setParameterValue(const MidiParameter& midiParameter)
+{
+    if(midiOutputConnection != nullptr)
+    {
+        midiOutputConnection->sendMessageNow(juce::MidiMessage::controllerEvent(1, midiParameter.ccNumber, midiParameter.getValue()));
+        return true;
+    }
+    else return false;
 }

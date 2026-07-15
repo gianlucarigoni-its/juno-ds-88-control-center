@@ -25,4 +25,5 @@ target_link_libraries(juno-ds-control-center PRIVATE
     juce::juce_recommended_warning_flags
     juce::juce_recommended_lto_flags
     juce::juce_audio_devices
+    juce::juce_core
 )

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <juce_audio_devices/juce_audio_devices.h>
+#include "MidiParameter.h"
 #include <functional>
 
 class MidiService : public juce::MidiInputCallback
@@ -21,6 +22,8 @@ public:
     void resetConnection();
     bool connectSelectedDevices(int inputIndex, int outputIndex);
     bool sendNote();
+
+    bool setParameterValue(const MidiParameter& midiParameter);
 
     void handleIncomingMidiMessage(juce::MidiInput*, const juce::MidiMessage& message) override;
 

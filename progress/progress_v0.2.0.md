@@ -127,3 +127,106 @@ La versione non è ancora pronta per la parte musicale più avanzata:
 
 La 0.2.0 sta iniziando nel modo giusto: non con più codice, ma con più chiarezza.  
 La cosa più importante imparata finora è che in C++ il modo in cui passi i dati, separi i ruoli e scegli cosa ritornare conta quanto la logica stessa.
+
+## Aggiornamento del 2026-07-15
+
+Data di compilazione/aggiornamento: 2026-07-15 03:41 CEST
+
+### Progressi fatti in questa chat
+
+- chiarita la scelta dei primi parametri musicali da controllare nella 0.2.0: volume, reverb, cutoff e chorus;
+- confermato che i primi parametri possono essere modellati con una struttura semplice e generica, senza introdurre complessità prematura;
+- capito che `MidiParameter` può restare una struct leggera con nome, numero di CC, valore e validazione del range tramite `jlimit`;
+- chiarito che `jlimit` non genera errori, ma adatta silenziosamente il valore dentro il range valido;
+- capito quando servono davvero getter e setter e quando invece bastano campi semplici con un solo setter per il valore;
+- chiarita la differenza tra struct e class in C++ e il motivo per cui una struct è adatta a rappresentare dati di dominio semplici;
+- capito che nel setup manuale con CMake non si usa `JuceHeader.h`, ma gli header dei moduli necessari, a partire da `juce_core`;
+- chiarito che per la struct `MidiParameter` non serve un `.cpp`, perché i metodi sono piccoli e possono restare inline nell’header;
+- iniziato a separare meglio il dominio dei parametri dal service MIDI;
+- verificato che il servizio MIDI può ricevere un parametro generico e inviare un Control Change senza conoscere il nome specifico del controllo;
+- confermato che il canale MIDI nel `controllerEvent(...)` è un dato importante e che il messaggio costruito è corretto come forma;
+- chiarito che il warning su `commandLine` in `initialise(...)` non era il vero problema di compilazione, ma solo un parametro non usato;
+- capito come sopprimere correttamente il warning di parametro non usato con `juce::ignoreUnused(...)` o con `(void) commandLine`;
+- risolto che l’errore reale di build era un `LNK1168`, quindi un problema di file eseguibile ancora aperto o bloccato, non di codice sorgente;
+- chiarito che uno slider JUCE non mostra da solo una label esterna e che per una UI leggibile conviene usare una `juce::Label` separata;
+- compreso che `CC11` è più adatto della classica idea di volume in patch mode e che `CC7`/`CC11` hanno significati diversi nella catena del suono;
+- compreso che `reverb send` e `chorus send` regolano la quantità di segnale mandata agli effetti, non il volume diretto del suono;
+- verificato che volume, cutoff, reverb e chorus funzionano come controllo MIDI lato app e che il comportamento è coerente con le aspettative del progetto;
+- chiarito che per la 0.2.0 ha più senso restare in patch mode e non anticipare la performance mode;
+- consolidato l’idea che la 0.2.0 debba restare focalizzata su un controllo musicale semplice, utile e ben leggibile, senza diventare un editor completo troppo presto.
+
+### Decisioni tecniche prese
+
+- i primi quattro controlli della 0.2.0 restano volume, reverb, cutoff e chorus;
+- `MidiParameter` viene trattata come una struttura di dominio semplice, generica e riusabile;
+- il valore del parametro viene validato internamente con `jlimit` per restare sempre nel range 0-127;
+- per ora non servono classi più complesse o gerarchie di parametri;
+- il service MIDI espone una funzione generica `setParameterValue(...)` per inviare qualsiasi parametro controllabile;
+- il codice di invio MIDI resta basato su `juce::MidiMessage::controllerEvent(...)` e `sendMessageNow(...)`;
+- la 0.2.0 viene mantenuta focalizzata sulla patch mode, rimandando la performance mode alle versioni future;
+- la UI attuale può restare semplice e non perfetta, perché ha già raggiunto un livello sufficiente per questa fase;
+- la crescita dell’interfaccia grafica sarà affrontata solo se e quando servirà davvero per la versione successiva;
+- la documentazione di progresso deve seguire la realtà del lavoro svolto, non solo il piano iniziale.
+
+### Concetti appresi
+
+- una struct in C++ può avere anche metodi, ma resta concettualmente adatta a contenere dati semplici;
+- un setter ha senso quando deve garantire una regola, come il clamp del valore nel range MIDI;
+- un getter o setter banale non serve sempre: va introdotto solo quando c’è un motivo reale;
+- `juce::jlimit(low, high, value)` limita il valore dentro il range senza lanciare errori;
+- un controllo MIDI può essere astratto in una struttura dati semplice, lasciando al service solo l’invio;
+- `juce::Slider` non fornisce automaticamente una label leggibile separata: va aggiunta a mano se serve chiarezza;
+- `CC11` può essere usato come controllo dinamico di espressione, non come volume assoluto;
+- `reverb send` e `chorus send` sono parametri di mandata agli effetti e possono risultare meno immediati da percepire;
+- in una fase iniziale del progetto conviene distinguere tra ciò che è utile oggi e ciò che potrebbe servire domani;
+- preparare il codice per crescere non significa progettare in anticipo tutta la futura architettura.
+
+### Problemi riscontrati
+
+- iniziale confusione su quale struttura dati usare per rappresentare i parametri musicali;
+- dubbio su quali moduli JUCE includere nel file header in assenza del template Projucer;
+- errore di interpretazione del comportamento di `jlimit`, pensato inizialmente come possibile fonte di errore;
+- warning sul parametro `commandLine` nella `JUCEApplication`, che sembrava un problema di build ma non lo era;
+- errore di link `LNK1168` causato da eseguibile ancora aperto o bloccato;
+- iniziale mancanza di chiarezza sul ruolo della label nella UI degli slider;
+- difficoltà nel capire perché i parametri `reverb` e `chorus` fossero meno evidenti all’ascolto rispetto a volume e cutoff;
+- rischio iniziale di anticipare troppo la performance mode rispetto agli obiettivi reali della 0.2.0;
+- tendenza a voler aggiungere struttura e astrazione prima di aver consolidato il comportamento base.
+
+### Soluzioni adottate
+
+- scelta di una struct semplice e generica per rappresentare i parametri MIDI;
+- uso di `juce::jlimit` per proteggere i valori del parametro;
+- mantenimento del service MIDI come unico punto di invio dei messaggi;
+- adozione di una funzione generica per l’invio del parametro invece di quattro funzioni specializzate;
+- uso di `juce::ignoreUnused(...)` o `(void) commandLine` per i parametri non usati;
+- interpretazione corretta del problema di build come errore di file bloccato, non di codice;
+- uso di label separate per rendere più leggibile la UI dei controlli;
+- mantenimento della 0.2.0 dentro il perimetro patch mode;
+- accettazione della UI attuale come sufficiente per questa fase, senza rifarla subito;
+- consolidamento del principio che prima si stabilizza il comportamento, poi si migliora l’aspetto.
+
+### Stato aggiornato della versione
+
+A questo punto la 0.2.0 ha una base molto più concreta:
+
+- i parametri principali sono stati individuati e testati;
+- il flusso UI → `MidiParameter` → `MidiService` → tastiera è funzionante;
+- il comportamento dei controlli è stato verificato e risulta coerente con l’uso previsto;
+- la distinzione tra patch mode e performance mode è stata chiarita;
+- il progetto resta coerente con l’idea di partire piccolo ma funzionante;
+- la struttura tecnica è abbastanza stabile da permettere il passo successivo senza dover ripartire da zero.
+
+### Prossimi passi consigliati
+
+1. consolidare il blocco dei quattro parametri come primo nucleo della 0.2.0;
+2. rendere più ordinato il `MainComponent` senza stravolgere la UI;
+3. tenere il service MIDI generico e pulito;
+4. continuare a documentare ciò che si scopre davvero durante i test;
+5. evitare di introdurre ora la performance mode o altre strutture non necessarie;
+6. prepararsi alla prossima versione solo quando la base attuale è davvero stabile.
+
+### Nota finale
+
+La 0.2.0 sta seguendo una direzione sana: prima si è chiarita la base tecnica, poi si sono introdotti i primi controlli musicali reali, infine si è capito meglio il comportamento della tastiera e dei parametri MIDI.  
+Il passo avanti più importante non è stato aggiungere feature, ma capire quali scelte sono davvero utili per il progetto e quali invece vanno rimandate.
