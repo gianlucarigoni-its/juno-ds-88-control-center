@@ -16,8 +16,8 @@ public:
     juce::Array<juce::MidiDeviceInfo> detectMidiInputDevices();
     juce::Array<juce::MidiDeviceInfo> detectMidiOutputDevices();
 
-    juce::Array<juce::MidiDeviceInfo> getMidiInputDevices();
-    juce::Array<juce::MidiDeviceInfo> getMidiOutputDevices();
+    const juce::Array<juce::MidiDeviceInfo>& getMidiInputDevices() const;
+    const juce::Array<juce::MidiDeviceInfo>& getMidiOutputDevices() const;
 
     void resetConnection();
     bool connectSelectedDevices(int inputIndex, int outputIndex);

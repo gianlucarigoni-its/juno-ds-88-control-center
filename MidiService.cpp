@@ -9,12 +9,12 @@ void MidiService::setLogCallback(std::function<void(const juce::String&)> callba
     onLog = callback;
 }
 
-juce::Array<juce::MidiDeviceInfo> MidiService::getMidiInputDevices()
+const juce::Array<juce::MidiDeviceInfo>& MidiService::getMidiInputDevices()
 {
     return midiInputDevices;
 }
 
-juce::Array<juce::MidiDeviceInfo> MidiService::getMidiOutputDevices()
+const juce::Array<juce::MidiDeviceInfo>& MidiService::getMidiOutputDevices()
 {
     return midiOutputDevices;
 }

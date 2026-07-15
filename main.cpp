@@ -13,7 +13,7 @@ public:
 
         // TITLE
         addAndMakeVisible(titleLabel);
-        titleLabel.setText("juno-ds Control Center v0.1.0", juce::dontSendNotification);
+        titleLabel.setText("juno-ds Control Center v0.2.0", juce::dontSendNotification);
         titleLabel.setJustificationType(juce::Justification::centredTop);
 
         // CONNECTION BUTTON
@@ -21,30 +21,40 @@ public:
         connectionButton.onClick = [this]
         {
             midiService.resetConnection();
-
-            juce::int32 midiInputID;
-            juce::int32 midiOutputID;
-            midiInputID = midiInputCombo.getSelectedId();
-            midiOutputID = midiOutputCombo.getSelectedId();
-            if(midiInputID != 0 && midiOutputID != 0) 
-            { 
-                if(midiService.connectSelectedDevices(midiInputID-1, midiOutputID-1))   
-                { 
-                    connectionStatusValue.setText("Connected", juce::dontSendNotification); 
-                    appendLog("Midi input and output devices are connected"); 
-                }
-                else                                                                    
-                { 
-                    connectionStatusValue.setText("Connection failed", juce::dontSendNotification);
-                    appendLog("Midi input/output device failed to connect"); 
-                }
-            }
-            else 
+            
+            auto inId = midiInputCombo.getSelectedId();
+            auto outId = midiOutputCombo.getSelectedId();
+            
+            const auto& inputs = midiService.getMidiInputDevices();
+            const auto& outputs = midiService.getMidiOutputDevices();
+            
+            if (inId <= 0 || outId <= 0)
             {
-                connectionStatusValue.setText("Connection Failed", juce::dontSendNotification);
-                appendLog("Connection button pressed: Connection failed. \n\tERROR: Input device/output device is not selected");
+                connectionStatusValue.setText("Connessione fallita", juce::dontSendNotification);
+                appendLog("Connessione fallita: input o output non selezionati");
+                return;
             }
 
+            auto inIndex = inId - 1;
+            auto outIndex = outId - 1;
+
+            if (inIndex < 0 || inIndex >= inputs.size() || outIndex < 0 || outIndex >= outputs.size())
+            {
+                connectionStatusValue.setText("Connessione fallita", juce::dontSendNotification);
+                appendLog("Connessione fallita: selezione non valida rispetto ai device rilevati");
+                return;
+            }
+
+            if (midiService.connectSelectedDevices(static_cast<int>(inIndex), static_cast<int>(outIndex)))
+            {
+                connectionStatusValue.setText("Connesso", juce::dontSendNotification);
+                appendLog("MIDI input e output connessi correttamente");
+            }
+            else
+            {
+                connectionStatusValue.setText("Connessione fallita", juce::dontSendNotification);
+                appendLog("Connessione MIDI fallita durante connectSelectedDevices");
+            }
         };
         
 
@@ -107,72 +117,24 @@ public:
         };
 
         // VOLUME SLIDER + MIDI PARAMETER
-        addAndMakeVisible(volumeSlider);
         volumeMidiParameter.name = juce::String("Volume");
         volumeMidiParameter.ccNumber = 11;
-        volumeSlider.setRange(0, 127, 1); 
-        volumeSlider.setTitle(volumeMidiParameter.name);
-        volumeSlider.onValueChange = [this]
-        {
-            volumeMidiParameter.setValue(int(volumeSlider.getValue()));
-            if(midiService.setParameterValue(volumeMidiParameter))
-                appendLog("Volume midi inpostato a " + juce::String(volumeMidiParameter.getValue()));
-            else
-                appendLog("Set volume failed");
-        };
-        addAndMakeVisible(volumeLabel);
-        volumeLabel.setText("Volume", juce::dontSendNotification);
+        createSlider(volumeSlider, volumeMidiParameter, volumeLabel);
 
         // REVERB SLIDER + MIDI PARAMETER
-        addAndMakeVisible(reverbSlider);
         reverbMidiParameter.name = juce::String("Reverb");
         reverbMidiParameter.ccNumber = 91;
-        reverbSlider.setRange(0, 127, 1); 
-        reverbSlider.setTitle(reverbMidiParameter.name);
-        reverbSlider.onValueChange = [this]
-        {
-            reverbMidiParameter.setValue(int(reverbSlider.getValue()));
-            if(midiService.setParameterValue(reverbMidiParameter))
-                appendLog("Reverb midi inpostato a " + juce::String(reverbMidiParameter.getValue()));
-            else
-                appendLog("Set reverb failed");
-        };
-        addAndMakeVisible(reverbLabel);
-        reverbLabel.setText("Reverb", juce::dontSendNotification);
+        createSlider(reverbSlider, reverbMidiParameter, reverbLabel);
 
         // CUTOFF SLIDER + MIDI PARAMETER
-        addAndMakeVisible(cutoffSlider);
         cutoffMidiParameter.name = juce::String("Cutoff");
         cutoffMidiParameter.ccNumber = 74;
-        cutoffSlider.setRange(0, 127, 1); 
-        cutoffSlider.setTitle(cutoffMidiParameter.name);
-        cutoffSlider.onValueChange = [this]
-        {
-            cutoffMidiParameter.setValue(int(cutoffSlider.getValue()));
-            if(midiService.setParameterValue(cutoffMidiParameter))
-                appendLog("Cutoff midi inpostato a " + juce::String(cutoffMidiParameter.getValue()));
-            else
-                appendLog("Set cutoff failed");
-        };
-        addAndMakeVisible(cutoffLabel);
-        cutoffLabel.setText("Cutoff", juce::dontSendNotification);
+        createSlider(cutoffSlider, cutoffMidiParameter, cutoffLabel);
 
         // CHORUS SLIDER + MIDI PARAMETER
-        addAndMakeVisible(chorusSlider);
-        chorusMidiParameter.name = juce::String("Volume");
+        chorusMidiParameter.name = juce::String("Chorus");
         chorusMidiParameter.ccNumber = 93;
-        chorusSlider.setRange(0, 127, 1); 
-        chorusSlider.setTitle(chorusMidiParameter.name);
-        chorusSlider.onValueChange = [this]
-        {
-            chorusMidiParameter.setValue(int(chorusSlider.getValue()));
-            if(midiService.setParameterValue(chorusMidiParameter))
-                appendLog("Chorus midi inpostato a " + juce::String(chorusMidiParameter.getValue()));
-            else
-                appendLog("Set chorus failed");
-        };
-        addAndMakeVisible(chorusLabel);
-        chorusLabel.setText("Chorus", juce::dontSendNotification);
+        createSlider(chorusSlider, chorusMidiParameter, chorusLabel);
 
         // LOG
         addAndMakeVisible(logEditor);
@@ -190,7 +152,7 @@ public:
         appendMidiDevices(midiOutputAvailable, midiOutputCombo);
         appendLog("Found " +  juce::String(midiOutputAvailable.size()) + " MIDI output devices");
         
-        setSize(600, 400);
+        setSize(1200, 800);
     }
 
     ~MainComponent() override = default;
@@ -206,15 +168,12 @@ public:
         connectionStatusRow.removeFromLeft(10);
         connectionStatusLabel.setBounds(connectionStatusRow.removeFromLeft(80));
         connectionStatusRow.removeFromLeft(10);
+        refreshDevicesButton.setBounds(connectionStatusRow.withSizeKeepingCentre(150, 25));
         connectionStatusValue.setBounds(connectionStatusRow.removeFromLeft(150));
         connectionButton.setBounds(connectionStatusRow.removeFromRight(100));
 
         area.removeFromTop(15);
-
-        auto refreshButtonRow = area.removeFromTop(25);
-        refreshDevicesButton.setBounds(refreshButtonRow.withSizeKeepingCentre(150, 25));
-
-        area.removeFromTop(10);
+        
 
         auto inputRow = area.removeFromTop(25);
         midiInputLabel.setBounds(inputRow.removeFromLeft(100));
@@ -275,6 +234,25 @@ public:
         }
     }
 
+    void createSlider(juce::Slider& slider, MidiParameter& parameter, juce::Label& label)
+    {
+        addAndMakeVisible(slider);
+
+        slider.setRange(0, 127, 1);
+        slider.onValueChange = [this, sliderPtr = &slider, parameterPtr = &parameter]
+        {
+            int value = sliderPtr->getValue();
+            parameterPtr->setValue(value);
+
+            if(midiService.setParameterValue(*parameterPtr))
+                appendLog(parameterPtr->name + " (cc" + juce::String(parameterPtr->ccNumber) + ") midi inpostato a " + juce::String(parameterPtr->getValue()));
+            else
+                appendLog("Set" + parameterPtr->name + " (cc" + juce::String(parameterPtr->ccNumber) + ") failed");
+        };
+
+        addAndMakeVisible(label);
+        label.setText(parameter.name, juce::dontSendNotification);
+    }
     
 
 private:

@@ -230,3 +230,75 @@ A questo punto la 0.2.0 ha una base molto più concreta:
 
 La 0.2.0 sta seguendo una direzione sana: prima si è chiarita la base tecnica, poi si sono introdotti i primi controlli musicali reali, infine si è capito meglio il comportamento della tastiera e dei parametri MIDI.  
 Il passo avanti più importante non è stato aggiungere feature, ma capire quali scelte sono davvero utili per il progetto e quali invece vanno rimandate.
+
+## Aggiornamento del 2026-07-15
+
+Data di compilazione/aggiornamento: 2026-07-15 16:45 CEST
+
+### Progressi fatti in questa chat
+
+- chiarito che il valore dei controlli MIDI viene inviato subito dal cambio dello slider, senza bisogno di un tasto di conferma;
+- confermato che in questa fase non serve separare invio locale e invio reale, perché il comportamento è già live;
+- deciso di non introdurre una label di stato più complessa, lasciando il feedback attuale semplice e coerente;
+- verificato che la struttura di `MidiService` è sufficientemente pulita per la 0.2.0;
+- reso più chiara la distinzione tra getter che ritornano copia e getter che ritornano riferimento costante;
+- sistemate le firme dei getter dei device MIDI in modo più corretto e leggibile;
+- chiarito che per leggere le liste dei device conviene usare `const juce::Array<juce::MidiDeviceInfo>&`;
+- consolidata la scelta di mantenere il blocco dei quattro parametri semplice e uniforme;
+- riconosciuto che il nucleo musicale della 0.2.0 è ormai stabile e non richiede altre aggiunte;
+- confermata la chiusura della versione 0.2.0 come release di consolidamento della base musicale iniziale.
+
+### Decisioni tecniche prese
+
+- il controllo slider → invio MIDI resta immediato;
+- i getter dei device MIDI sono meglio espressi come `const` e con ritorno per riferimento costante;
+- non serve introdurre adesso ulteriori layer di astrazione per la UI o per il feedback;
+- il blocco dei parametri resta volutamente piccolo e coerente;
+- la 0.2.0 viene considerata completata e chiusa;
+- la prossima fase di lavoro potrà partire da una base già stabile e documentata.
+
+### Concetti appresi
+
+- un getter può restituire una copia oppure un riferimento costante, e la scelta cambia il costo e l’intenzione espressa dal codice;
+- in un service semplice conviene esporre il minimo necessario senza creare complessità inutile;
+- una funzione `const` comunica bene l’idea che non modifica lo stato interno;
+- una versione può essere chiusa non perché è perfetta, ma perché ha raggiunto il suo obiettivo;
+- lasciare un comportamento semplice è spesso più utile che rifinirlo troppo presto.
+
+### Problemi riscontrati
+
+- dubbio iniziale su quale firma fosse più corretta per i getter dei device MIDI;
+- rischio di complicare il feedback UI senza reale bisogno;
+- tentazione di aggiungere rifiniture non necessarie a una versione già completa nei suoi obiettivi;
+- necessità di distinguere bene tra miglioramento utile e ottimizzazione prematura.
+
+### Soluzioni adottate
+
+- mantenimento del comportamento live immediato sui controlli;
+- uso di getter const con riferimento costante per i device MIDI;
+- conferma dello scope ristretto della 0.2.0;
+- scelta di chiudere la versione senza estenderla con feature fuori obiettivo;
+- consolidamento della documentazione come diario reale del lavoro fatto.
+
+### Stato aggiornato della versione
+
+La 0.2.0 è ora da considerare chiusa.
+
+Il progetto ha ottenuto:
+
+- una base MIDI più ordinata;
+- i primi controlli musicali funzionanti;
+- una separazione più chiara tra service e UI;
+- un flusso di invio immediato e comprensibile;
+- una documentazione coerente con il lavoro svolto.
+
+### Prossimi passi consigliati
+
+1. definire il focus della 0.3.0;
+2. scegliere la prossima area da consolidare senza sovraccaricare il progetto;
+3. mantenere lo stesso approccio graduale e pulito;
+4. continuare a privilegiare chiarezza e utilità reale.
+
+### Nota finale
+
+La 0.2.0 ha fatto il suo lavoro: ha trasformato la base MIDI in un primo controllo musicale reale, senza perdere ordine o semplicità. Ora il progetto può avanzare da una posizione molto più solida.
